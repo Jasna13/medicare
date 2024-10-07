@@ -25,28 +25,46 @@
 </body>
 </html>
 <?php
+session_start(); // Start the session
 include("connection.php");
+//Check if there is a message in the URL query string
+if (isset($_GET['message']) && $_GET['message'] == 'logout_successful') {
+    echo "<script>alert('Logout successful');</script>";
+}
+
 if (isset($_POST['submit'])) {
     $email = $_POST['email'];
     $password = $_POST['password'];
-    // Fetch the stored hashed password from the database
-    $sql = "SELECT * FROM user WHERE email='$email' and password='$password'";
+
+    // Check if the email exists and the password matches
+    $sql = "SELECT * FROM user WHERE email='$email' AND password='$password'";
     $result = mysqli_query($con, $sql);
-    $num=mysqli_num_rows($result);
-    if($num>0){
-        $s="SELECT * FROM user WHERE password='$password' and utype='user'";
-        $rs=mysqli_query($con,$s);
-        $n=mysqli_num_rows($result);
-        if($n>0)
-        {   
-            header("location:index2.php");
+    $num = mysqli_num_rows($result);
+
+    if ($num > 0) {
+        $row = mysqli_fetch_assoc($result);  // Fetch user data
+        $utype = $row['utype'];  // Get the user type
+        $uid = $row['uid']; // Get the user ID
+
+        // Set session variables
+        $_SESSION['uid'] = $uid;
+
+        if ($utype == 'user') {
+            error_log("Redirecting to user dashboard");
+            header("Location: http://localhost/MINI%20PROJECT/userdashboard/index1.php");
+            exit();
+        } elseif ($utype == 'staff') {
+            error_log("Redirecting to staff dashboard");
+            header("Location: http://localhost/MINI%20PROJECT/StaffDashboard/staffindex.html");
+            exit();
+        } elseif ($utype == 'admin') {
+            error_log("Redirecting to admin dashboard");
+            header("Location: admin_dashboard.php");
+            exit();
         }
-        else{
-            header("location:index2.php");
-        }
-    }
-    else{
-        echo '<script>alert("email id or password is not matching")</script>';
+    } else {
+        error_log("Login failed: incorrect email or password");
+        echo '<script>alert("Email ID or password is incorrect")</script>';
     }
 }
 ?>
