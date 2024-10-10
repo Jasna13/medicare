@@ -6,6 +6,42 @@
   <title>Products | MediCare</title>
   <link rel="stylesheet" href="styles.css">
   <!-- <script src="script.js" defer></script> -->
+  <style>
+    /* Modal styles */
+    .modal {
+      display: none; 
+      position: fixed; 
+      z-index: 1; 
+      left: 0;
+      top: 0;
+      width: 100%; 
+      height: 100%; 
+      overflow: auto; 
+      background-color: rgb(0,0,0);
+      background-color: rgba(0,0,0,0.9); 
+      padding-top: 60px;
+    }
+    .modal-content {
+      margin: auto;
+      display: block;
+      width: 80%; 
+      max-width: 700px; 
+    }
+    .close {
+      position: absolute;
+      top: 15px;
+      right: 35px;
+      color: #fff;
+      font-size: 40px;
+      font-weight: bold;
+    }
+    .close:hover,
+    .close:focus {
+      color: #bbb;
+      text-decoration: none;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
   <!-- Navbar -->
@@ -43,7 +79,7 @@
       // Database connection
       $servername = "localhost"; 
       $username = "root"; 
-      $password = "root"; 
+      $password = ""; 
       $dbname = "medico_shop"; 
 
       $conn = new mysqli($servername, $username, $password, $dbname);
@@ -69,17 +105,10 @@
                               ? "<span class='original-price'>\$" . number_format($row['price'], 2) . "</span> \$" . $discountedPrice
                               : "\$" . $discountedPrice;
 
-              // Image path with validation
-              $imagePath = !empty($row['image']) ? htmlspecialchars($row['image'], ENT_QUOTES) : 'default-image.jpg';
-              
-              // If the image does not exist, show a default image
-              if (!file_exists($imagePath)) {
-                  $imagePath = 'default-image.png'; // Path to your default image
-              }
-
+            
               // Display product card
               echo "<div class='product-card' data-category='" . htmlspecialchars($row['category'], ENT_QUOTES) . "' data-id='" . htmlspecialchars($row['id'], ENT_QUOTES) . "'>
-                      <img src='$imagePath' alt='" . htmlspecialchars($row['name'], ENT_QUOTES) . "' style='width: 150px; height: 150px;' /> <!-- Product Image -->
+                      <img src=".$row['image']." alt='" . htmlspecialchars($row['name'], ENT_QUOTES) . "' style='width: 150px; height: 150px;' class='product-image' /> <!-- Product Image -->
                       <h3>" . htmlspecialchars($row['name'], ENT_QUOTES) . "</h3>
                       <p>Price: $priceDisplay</p>
                       <button class='btn view-details' onclick='viewDetails(\"" . htmlspecialchars($row['id'], ENT_QUOTES) . "\")'>View Details</button>
@@ -94,6 +123,13 @@
     </div>
   </section>
 
+  <!-- Modal for image viewing -->
+  <div id="myModal" class="modal">
+    <span class="close" onclick="closeModal()">&times;</span>
+    <img class="modal-content" id="img01">
+    <div id="caption"></div>
+  </div>
+
   <!-- Footer -->
   <footer>
     <p>&copy; 2024 MediCare. All rights reserved.</p>
@@ -103,9 +139,25 @@
     document.addEventListener('DOMContentLoaded', function() {
       // View Details functionality
       window.viewDetails = function(productId) {
-        // Redirect to product details page or show a modal
         window.location.href = "product_details.php?id=" + productId; // Change to your product details page
       };
+
+      // Image viewing functionality
+      const modal = document.getElementById("myModal");
+      const modalImg = document.getElementById("img01");
+      const captionText = document.getElementById("caption");
+
+      document.querySelectorAll('.product-image').forEach(img => {
+        img.onclick = function(){
+          modal.style.display = "block";
+          modalImg.src = this.src;
+          captionText.innerHTML = this.alt;
+        }
+      });
+
+      const closeModal = function() {
+        modal.style.display = "none";
+      }
 
       // Category selection functionality
       const categorySelect = document.getElementById('categorySelect');
