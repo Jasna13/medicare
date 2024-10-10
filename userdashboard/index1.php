@@ -89,7 +89,7 @@
 $host = "localhost";
 $dbname = "medico_shop";
 $username = "root";
-$password = "root";
+$password = "";
 
 // Create connection
 $conn = new mysqli($host, $username, $password, $dbname);
