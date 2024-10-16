@@ -108,7 +108,7 @@
             
               // Display product card
               echo "<div class='product-card' data-category='" . htmlspecialchars($row['category'], ENT_QUOTES) . "' data-id='" . htmlspecialchars($row['id'], ENT_QUOTES) . "'>
-                      <img src=".$row['image']." alt='" . htmlspecialchars($row['name'], ENT_QUOTES) . "' style='width: 150px; height: 150px;' class='product-image' /> <!-- Product Image -->
+                      <img src= ../".$row['image']." alt='" . htmlspecialchars($row['name'], ENT_QUOTES) . "' style='width: 150px; height: 150px;' class='product-image' /> <!-- Product Image -->
                       <h3>" . htmlspecialchars($row['name'], ENT_QUOTES) . "</h3>
                       <p>Price: $priceDisplay</p>
                       <button class='btn view-details' onclick='viewDetails(\"" . htmlspecialchars($row['id'], ENT_QUOTES) . "\")'>View Details</button>
