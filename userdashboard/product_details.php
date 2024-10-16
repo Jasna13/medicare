@@ -2,7 +2,7 @@
 // Database connection
 $servername = "localhost"; 
 $username = "root"; 
-$password = "root"; 
+$password = ""; 
 $dbname = "medico_shop"; 
 
 $conn = new mysqli($servername, $username, $password, $dbname);
@@ -158,7 +158,7 @@ if (!$product) {
     <main>
         <div class="product-card">
             <div class="product-image">
-                <img src="<?php echo htmlspecialchars($product['image'], ENT_QUOTES); ?>" alt="<?php echo htmlspecialchars($product['name'], ENT_QUOTES); ?>" />
+                <img src="../<?php echo htmlspecialchars($product['image'], ENT_QUOTES); ?>" alt="<?php echo htmlspecialchars($product['name'], ENT_QUOTES); ?>" />
             </div>
             <div class="product-info">
                 <h2><?php echo htmlspecialchars($product['name'], ENT_QUOTES); ?></h2>
