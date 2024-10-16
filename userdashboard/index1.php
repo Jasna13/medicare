@@ -47,7 +47,7 @@
     $host = "localhost";
     $dbname = "medico_shop";
     $username = "root";
-    $password = "root";
+    $password = "";
 
     // Create connection
     $conn = new mysqli($host, $username, $password, $dbname);
@@ -68,7 +68,7 @@
             $finalPrice = number_format($row['original_price']-$row['discounted_price']);
             // $discountDisplay = "<span class='original-price'>\$" . number_format($row['price'], 2) . "</span> \$" . $finalPrice;
             echo "<div class='product-card'>
-                    <img src='".htmlspecialchars($row['product_image'], ENT_QUOTES)."' alt='".htmlspecialchars($row['product_name'], ENT_QUOTES)."'>
+                    <img src='../".$row['product_image']."' alt='".htmlspecialchars($row['product_name'], ENT_QUOTES)."'>
                     <h3>".htmlspecialchars($row['product_name'], ENT_QUOTES)."</h3>
                     <p><span class='original-price'>₹".number_format($row['original_price'], 2)."</span> ₹".htmlspecialchars($finalPrice, ENT_QUOTES)."</p>
                     <button class='btn buy-now'>Buy Now</button>
