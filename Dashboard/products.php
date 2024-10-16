@@ -1,6 +1,6 @@
 <?php
 // Database connection
-$conn = new mysqli('localhost', 'root', 'root', 'medico_shop');
+$conn = new mysqli('localhost', 'root', '', 'medico_shop');
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
@@ -20,59 +20,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $stock = $_POST['stock'];
     $category = $_POST['category'];
     $discount = $_POST['discount'];
-
-    // Validate that the discounted price is not greater than the actual price
-    if ($discount > $price) {
-        echo "Error: Discounted price cannot be greater than the actual price.";
-        exit;
-    }
-
-    // Handle file upload
-    if (isset($_FILES["image"]) && $_FILES["image"]["error"] === UPLOAD_ERR_OK) {
-        // Allowed image types
-        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-        if (in_array($_FILES["image"]["type"], $allowedTypes)) {
-            // Convert image to base64
-            $imageBase64 = imageToBase64($_FILES["image"]["tmp_name"]);
-
-            // Prepare and execute the insert query
-            $stmt = $conn->prepare("INSERT INTO products (name, price, stock, category, discounted_price, image) 
-                                    VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("sdiiss", $name, $price, $stock, $category, $discount, $imageBase64);
-            if ($stmt->execute()) {
-                echo "<script>alert('Product added successfully');</script>";
-            } else {
-                echo "Error: " . $conn->error;
-            }
-        } else {
-            echo "Error: Only image files (jpeg, png, gif) are allowed.";
-        }
+    
+    // Handle image upload
+    if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
+        $image = $_FILES['image'];
+        $imagePath = 'images/' . basename($image['name']);  // Set the path where the image will be saved
+        move_uploaded_file($image['tmp_name'], $imagePath);  // Move the uploaded file to the server
     } else {
-        echo "Error: File upload error.";
+        $imagePath = '';  // If no image, set empty
+    }
+    
+    // Insert into the database
+    $stmt = $conn->prepare("INSERT INTO products (name, price, stock, category, discounted_price, image) VALUES (?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param('sdisss', $name, $price, $stock, $category, $discount, $imagePath);
+    if ($stmt->execute()) {
+        echo "Product added successfully!";
+    } else {
+        echo "Error adding product: " . $stmt->error;
     }
 }
 
 // Handle Delete Product
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete') {
-    $id = $_POST['id'];
-    $stmt = $conn->prepare("DELETE FROM products WHERE id=?");
-    $stmt->bind_param("i", $id);
+    $productId = $_POST['id'];
+    
+    // Delete the product from the database
+    $stmt = $conn->prepare("DELETE FROM products WHERE id = ?");
+    $stmt->bind_param('i', $productId);
     if ($stmt->execute()) {
-        echo "<script>alert('Product deleted successfully');</script>";
+        echo "Product deleted successfully!";
     } else {
-        echo "Error: " . $conn->error;
+        echo "Error deleting product: " . $stmt->error;
     }
 }
 
-// Handle Edit Product
+// Handle Edit Product (Retrieve the product data to pre-fill the form)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'edit') {
-    $id = $_POST['id'];
-    $stmt = $conn->prepare("SELECT * FROM products WHERE id=?");
-    $stmt->bind_param("i", $id);
+    $productId = $_POST['id'];
+    $stmt = $conn->prepare("SELECT * FROM products WHERE id = ?");
+    $stmt->bind_param('i', $productId);
     $stmt->execute();
     $result = $stmt->get_result();
+    
     if ($result->num_rows > 0) {
-        $productToEdit = $result->fetch_assoc(); // Product data to edit
+        $productToEdit = $result->fetch_assoc();
     }
 }
 
@@ -85,40 +76,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $category = $_POST['category'];
     $discount = $_POST['discount'];
 
-    // Validate discounted price
-    if ($discount > $price) {
-        echo "Error: Discounted price cannot be greater than the actual price.";
-        exit;
-    }
-
-    // Check if a new image is uploaded
-    if (!empty($_FILES["image"]["name"])) {
-        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-        if (in_array($_FILES["image"]["type"], $allowedTypes)) {
-            // Convert image to base64
-            $imageBase64 = imageToBase64($_FILES["image"]["tmp_name"]);
-
-            // Update query with new image
-            $stmt = $conn->prepare("UPDATE products SET name=?, price=?, stock=?, category=?, discounted_price=?, image=? WHERE id=?");
-            $stmt->bind_param("sdiissi", $name, $price, $stock, $category, $discount, $imageBase64, $id);
-        } else {
-            echo "Error: Only image files (jpeg, png, gif) are allowed.";
-            exit;
-        }
+    // Handle image upload (if new image is uploaded)
+    if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
+        $image = $_FILES['image'];
+        $imagePath = 'images/' . basename($image['name']);
+        move_uploaded_file($image['tmp_name'], $imagePath);
     } else {
-        // Update query without image
-        $stmt = $conn->prepare("UPDATE products SET name=?, price=?, stock=?, category=?, discounted_price=? WHERE id=?");
-        $stmt->bind_param("sdiisi", $name, $price, $stock, $category, $discount, $id);
+        // If no new image uploaded, keep the old image path
+        $imagePath = $productToEdit['image'];
     }
 
+    // Update the product in the database
+    $stmt = $conn->prepare("UPDATE products SET name = ?, price = ?, stock = ?, category = ?, discounted_price = ?, image = ? WHERE id = ?");
+    $stmt->bind_param('sdisssi', $name, $price, $stock, $category, $discount, $imagePath, $id);
+    
     if ($stmt->execute()) {
-        echo "<script>alert('Product updated successfully');</script>";
+        echo "Product updated successfully!";
+        header('Location: products.php');  // Redirect after update to avoid form resubmission
+        exit;
     } else {
-        echo "Error: " . $conn->error;
+        echo "Error updating product: " . $stmt->error;
     }
 }
 
-$products = array();
+// Fetch products for display
+$products = [];
 $result = $conn->query("SELECT * FROM products");
 if ($result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
@@ -127,24 +109,29 @@ if ($result->num_rows > 0) {
 }
 ?>
 
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Product Management</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="styles.css">
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 0;
         }
         header {
             background-color: #333;
             color: white;
             padding: 20px;
             text-align: center;
+            height:130px;
+        }
+        nav{
+            background-color:#333;
         }
         nav ul {
             list-style: none;
@@ -152,8 +139,8 @@ if ($result->num_rows > 0) {
             margin: 0;
         }
         nav ul li {
-            display: inline;
-            margin-right: 15px;
+            /* display: inline; */
+            /* margin-right: 20px; */
         }
         nav ul li a {
             color: white;
@@ -161,40 +148,52 @@ if ($result->num_rows > 0) {
         }
         section {
             padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
         }
         table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 20px;
-        }
-        table, th, td {
-            border: 1px solid #ccc;
+            background-color: #fff;
+            border-radius: 5px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
         th, td {
-            padding: 10px;
+            padding: 15px;
             text-align: left;
+            border-bottom: 1px solid #ddd;
         }
-        button {
+        th {
             background-color: #444;
             color: white;
+        }
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius:5px;
-            margin-right:10px;
+            padding: 10px 15px;
+            border-radius: 5px;
             cursor: pointer;
+            transition: background-color 0.3s;
         }
-        .button:hover {
-            background-color:#666;
-        }
-        button.update {
-            background-color: #337ab7;
+        button:hover {
+            background-color: #0056b3;
         }
         button.delete {
-            background-color: #d9534f;
+            background-color: #dc3545;
+        }
+        button.delete:hover {
+            background-color: #c82333;
         }
         img {
-            max-width: 100px;
+            max-width: 80px;
             height: auto;
+            border-radius: 5px;
         }
         form {
             margin-bottom: 20px;
@@ -202,37 +201,49 @@ if ($result->num_rows > 0) {
             background-color: #fff;
             border: 1px solid #ccc;
             border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
         label {
             display: block;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
+            font-weight: bold;
         }
         input, select {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 10px;
+            width: calc(100% - 16px);
+            padding: 10px;
+            margin-bottom: 15px;
             border: 1px solid #ccc;
-            border-radius: 4px;
+            border-radius: 5px;
         }
         .form-group {
             margin-bottom: 20px;
         }
+        footer {
+            text-align: center;
+            padding: 10px;
+            background-color: #444;
+            color: white;
+            position: relative;
+            bottom: 0;
+            width: 100%;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
+<nav>
 <header>
     <h1>Product Management</h1>
-    <nav>
         <ul>
-            <li><a href="index.php">Dashboard</a></li>
+            <li><a href="index2.php">Dashboard</a></li>
             <li><a href="products.php">Product Management</a></li>
             <li><a href="stock.php">Stock Management</a></li>
             <li><a href="staff.php">Staff Management</a></li>
             <li><a href="order.html">Order Management</a></li>
         </ul>
-    </nav>
 </header>
-<section id="product" class="panel">
+</nav>
+<section id="product">
     <h2>Manage Products</h2>
 
     <form id="product-form" method="POST" enctype="multipart/form-data">
@@ -294,7 +305,7 @@ if ($result->num_rows > 0) {
                 <td><?= $product['stock'] ?></td>
                 <td><?= htmlspecialchars($product['category']) ?></td>
                 <td><?= number_format($product['discounted_price'], 2) ?></td>
-                <td><img src="<?= $product['image'] ?>" alt="Product Image"></td>
+                <td><img src="../<?= $product['image'] ?>" alt="Product Image"></td>
                 <td>
                     <?php 
                         $final_price = $product['price'] - $product['discounted_price'];
@@ -318,8 +329,8 @@ if ($result->num_rows > 0) {
         </tbody>
     </table>
 </section>
-</body>
 <footer>
-        <p>&copy; 2024 Admin Dashboard</p>
-    </footer>
+    <p>&copy; 2024 Admin Dashboard</p>
+</footer>
+</body>
 </html>
